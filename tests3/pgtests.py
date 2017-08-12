@@ -501,7 +501,6 @@ class PGTestCase(unittest.TestCase):
         self.cursor.execute("insert into t1 values ('one')")
         self.failUnlessRaises(pyodbc.IntegrityError, self.cursor.execute, "insert into t1 values ('one')")
 
-
     def test_cnxn_set_attr_before(self):
         # I don't have a getattr right now since I don't have a table telling me what kind of
         # value to expect.  For now just make sure it doesn't crash.
@@ -516,6 +515,19 @@ class PGTestCase(unittest.TestCase):
         SQL_ATTR_ACCESS_MODE = 101
         SQL_MODE_READ_ONLY   = 1
         self.cnxn.set_attr(SQL_ATTR_ACCESS_MODE, SQL_MODE_READ_ONLY)
+
+    def test_parameter_array_strings(self):
+        self.cursor.execute("create table t1(s1 varchar(20), n1 int)")
+        values = [
+            ('one', 1),
+            ('two', 2),
+            # ('我的', 3)
+        ]
+        self.cursor.fast_executemany = True
+        self.cursor.executemany("insert into t1(s1, n1) values (?, ?)", values)
+        self.cursor.execute("select s1, n1 from t1 order by n1")
+        rows = [tuple(row) for row in self.cursor]
+        self.assertEqual(rows, values)
 
 
 def main():
