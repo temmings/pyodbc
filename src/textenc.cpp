@@ -5,6 +5,11 @@
 
 PyObject* TextEnc::Encode(PyObject* obj) const
 {
+    if (obj == Py_None || obj == 0)
+    {
+        return 0;
+    }
+
 #if PY_MAJOR_VERSION < 3
     if (optenc == OPTENC_RAW || PyBytes_Size(obj) == 0)
     {

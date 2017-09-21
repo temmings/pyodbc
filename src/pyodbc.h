@@ -55,6 +55,7 @@ typedef unsigned long long UINT64;
 
 #include <sql.h>
 #include <sqlext.h>
+#include <sqlucode.h>
 
 #if PY_VERSION_HEX < 0x02050000 && !defined(PY_SSIZE_T_MIN)
 typedef int Py_ssize_t;

@@ -1277,29 +1277,52 @@ static char columns_doc[] =
 
 char* Cursor_column_kwnames[] = { "table", "catalog", "schema", "column", 0 };
 
+inline SQLWCHAR* BytesOrNull(Object& o)
+{
+    // Convenience (macro-like) function to return the internal memory pointer as a SQLWCHAR*
+    // or 0.
+    return (SQLWCHAR*)(o ? PyBytes_AS_STRING(o.Get()) : 0);
+}
+
 static PyObject* Cursor_columns(PyObject* self, PyObject* args, PyObject* kwargs)
 {
-    const char* szCatalog = 0;
-    const char* szSchema  = 0;
-    const char* szTable   = 0;
-    const char* szColumn  = 0;
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|ssss", Cursor_column_kwnames, &szTable, &szCatalog, &szSchema, &szColumn))
-        return 0;
+    // Unfortunately there is no "ez" format units for decoding a string when passed and
+    // accepting None when passed (like "z").  Therefore we're reading as PyObjects and
+    // manually checking.  The only other option I can see is using "z", creating a new string,
+    // and *then* converting, but that is super wasteful since it is highly likely the string
+    // is already in UTF8 (latin1 internally).
 
     Cursor* cur = Cursor_Validate(self, CURSOR_REQUIRE_OPEN);
-
     if (!free_results(cur, FREE_STATEMENT | FREE_PREPARED))
         return 0;
+
+    Object catalog, schema, table, column;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOOO", Cursor_column_kwnames,
+                                     table.GetAddr(), catalog.GetAddr(), schema.GetAddr(), column.GetAddr()))
+    {
+        return 0;
+    }
+
+    const TextEnc& enc = cur->cnxn->metadata_enc;
+
+    Object tableBytes(enc.Encode(table));
+    Object catalogBytes(enc.Encode(catalog));
+    Object schemaBytes(enc.Encode(schema));
+    Object columnBytes(enc.Encode(column));
 
     SQLRETURN ret = 0;
 
     Py_BEGIN_ALLOW_THREADS
-    ret = SQLColumns(cur->hstmt, (SQLCHAR*)szCatalog, SQL_NTS, (SQLCHAR*)szSchema, SQL_NTS, (SQLCHAR*)szTable, SQL_NTS, (SQLCHAR*)szColumn, SQL_NTS);
+        ret = SQLColumnsW(cur->hstmt,
+                          BytesOrNull(catalogBytes), SQL_NTS,
+                          BytesOrNull(schemaBytes), SQL_NTS,
+                          BytesOrNull(tableBytes), SQL_NTS,
+                          BytesOrNull(columnBytes), SQL_NTS);
     Py_END_ALLOW_THREADS
 
     if (!SQL_SUCCEEDED(ret))
-        return RaiseErrorFromHandle(cur->cnxn, "SQLColumns", cur->cnxn->hdbc, cur->hstmt);
+        return RaiseErrorFromHandle(cur->cnxn, "SQLColumnsW", cur->cnxn->hdbc, cur->hstmt);
 
     SQLSMALLINT cCols;
     Py_BEGIN_ALLOW_THREADS

@@ -57,6 +57,14 @@ public:
         return p;
     }
 
+    PyObject** GetAddr()
+    {
+        // This is only used when passing to PyArg_ParseTuple and family which is going to
+        // overwrite the pointer!
+        I(p == 0);
+        return &p;
+    }
+
     operator PyVarObject*() { return (PyVarObject*)p; }
 
     operator const bool() { return p != 0; }

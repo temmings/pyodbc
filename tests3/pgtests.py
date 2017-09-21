@@ -517,6 +517,14 @@ class PGTestCase(unittest.TestCase):
         SQL_MODE_READ_ONLY   = 1
         self.cnxn.set_attr(SQL_ATTR_ACCESS_MODE, SQL_MODE_READ_ONLY)
 
+    def test_columns(self):
+        "Ensure cursor columns works"
+        self.cursor.execute("create table t1(a int, b varchar(20))")
+        self.cursor.columns('t1')
+        rows = self.cursor.fetchall()
+        names = {row.column_name for row in rows}
+        self.assertEqual({'a', 'b'}, names)
+
 
 def main():
     from optparse import OptionParser
