@@ -214,7 +214,7 @@ public:
         // We have allocated our own SQLWCHAR buffer and must now copy it to a Unicode object.
         PyObject* result = PyUnicode_FromSQLWCHAR((const SQLWCHAR*)buffer, bytesUsed / element_size);
         if (result == 0)
-            return false;
+            return 0;
         pyodbc_free(buffer);
         buffer = 0;
         return result;
